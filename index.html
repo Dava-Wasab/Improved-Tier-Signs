@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Improved Tier Signs | Client-Side Minecraft Mod</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Roboto+Mono&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --md-sys-color-primary: #D0BCFF;
+            --md-sys-color-on-primary: #381E72;
+            --md-sys-color-surface: #1C1B1F;
+            --md-sys-color-on-surface: #E6E1E5;
+            --card-bg: #2b2930;
+        }
+
+        body {
+            background-color: var(--md-sys-color-surface);
+            color: var(--md-sys-color-on-surface);
+            font-family: 'Google Sans', sans-serif;
+            overflow-x: hidden;
+            scroll-behavior: smooth;
+            margin: 0;
+            padding: 0;
+        }
+
+        .pixelated {
+            image-rendering: pixelated;
+        }
+
+        .brand-text-white { color: #FFFFFF; }
+        .brand-text-color { color: var(--md-sys-color-primary); }
+
+        .page-wrapper {
+            background: radial-gradient(circle at top right, rgba(208, 188, 255, 0.05), transparent),
+                        var(--md-sys-color-surface);
+            min-height: 100vh;
+        }
+
+        .m3-btn-3d {
+            position: relative;
+            background-color: var(--md-sys-color-primary);
+            color: var(--md-sys-color-on-primary);
+            padding: 16px 32px;
+            border-radius: 16px;
+            font-weight: 700;
+            perspective: 1000px;
+            transition: transform 0.1s ease-out, box-shadow 0.3s ease;
+            transform-style: preserve-3d;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            text-decoration: none;
+        }
+
+        .m3-btn-3d:hover {
+            box-shadow: 0 15px 30px rgba(208, 188, 255, 0.2);
+        }
+
+        .u-card {
+            background-color: var(--card-bg);
+            border-radius: 28px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: transform 0.1s ease-out, border-color 0.4s ease, background-color 0.4s ease;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transform-style: preserve-3d;
+            backface-visibility: hidden;
+        }
+
+        .u-card:hover {
+            border-color: rgba(208, 188, 255, 0.3);
+            background-color: #35333b;
+        }
+
+        /* Эффект блика/экспозиции */
+        .card-shimmer {
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle at 50% 50%, rgba(255,255,255,0.1) 0%, transparent 80%);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+            z-index: 5;
+        }
+
+        .u-card:hover .card-shimmer {
+            opacity: 1;
+        }
+
+        .tier-icon-wrapper {
+            position: relative;
+            background: transparent !important;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            transform: translateZ(50px);
+        }
+
+        .tier-glow-effect {
+            position: absolute;
+            width: 140px;
+            height: 140px;
+            border-radius: 50%;
+            filter: blur(50px);
+            opacity: 0.2;
+            z-index: 1;
+        }
+
+        .reveal {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+        }
+        .reveal.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .float-anim {
+            animation: float 5s ease-in-out infinite;
+            position: relative;
+            z-index: 10;
+        }
+        @keyframes float {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            50% { transform: translateY(-15px) rotate(2deg); }
+        }
+
+        section { scroll-margin-top: 100px; }
+
+        .hero-section {
+            min-height: calc(100vh - 80px);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .comparison-table th { background: rgba(255,255,255,0.03); }
+        .comparison-table td { border-bottom: 1px solid rgba(255,255,255,0.05); }
+
+        .author-btn {
+            background-color: rgba(255, 255, 255, 0.05);
+            padding-top: 0.75rem;
+            padding-bottom: 0.75rem;
+            border-radius: 1rem;
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-align: center;
+            transition: background-color 0.2s, transform 0.2s;
+            display: block;
+            width: 100%;
+            transform: translateZ(20px);
+        }
+
+        .author-btn:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+    </style>
+</head>
+<body>
+
+<div class="page-wrapper">
+    <!-- Warning Modal -->
+    <div id="custom-modal" class="hidden fixed inset-0 bg-black/90 backdrop-blur-xl z-[2000] items-center justify-center">
+        <div class="u-card p-10 max-w-lg w-full mx-4 text-center shadow-2xl">
+            <h3 id="modal-title" class="text-3xl font-bold mb-4">Предупреждение</h3>
+            <p id="modal-text" class="opacity-70 mb-8 leading-relaxed">Вы переходите на внешнюю страницу оригинального автора (imsawiq). Мы ценим его вклад, но не можем гарантировать безопасность внешних ресурсов.</p>
+            <div class="flex flex-col gap-3 w-full">
+                <button id="modal-no" class="m3-btn-3d w-full justify-center">Вернуться назад</button>
+                <button id="modal-yes" class="text-xs opacity-30 hover:opacity-100 p-2 transition-opacity">Я принимаю риск, перейти</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Nav -->
+    <nav class="fixed top-0 w-full z-50 bg-[#1c1b1fcc] backdrop-blur-md h-20 flex items-center px-6 md:px-12 justify-between border-b border-white/5">
+        <div class="flex items-center gap-3 cursor-pointer" onclick="window.scrollTo({top: 0, behavior: 'smooth'})">
+            <img src="https://raw.githubusercontent.com/Artur7620/DMCTierSigns/refs/heads/master/src/main/resources/assets/dmc_tiersigns/icon.png" class="w-10 h-10 pixelated" alt="Logo">
+            <span class="text-lg font-bold tracking-tighter uppercase"><span class="brand-text-white">Improved</span> <span class="brand-text-color">Tier Signs</span></span>
+        </div>
+        <div class="hidden md:flex gap-8 text-sm font-medium opacity-60">
+            <a href="#tiers" class="hover:text-purple-300 transition-colors">Тиры Территорий</a>
+            <a href="#comparison" class="hover:text-purple-300 transition-colors">Сравнение</a>
+            <a href="#authors" class="hover:text-purple-300 transition-colors">Команда</a>
+        </div>
+        <a href="https://github.com/Artur7620/DMCTierSigns/releases" class="m3-btn-3d py-2 px-6 text-xs shadow-none">Скачать</a>
+    </nav>
+
+    <!-- Hero Section -->
+    <header class="hero-section px-6 max-w-7xl mx-auto text-center reveal active pt-20">
+        <div class="inline-block mb-6 px-4 py-1 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-300 text-[10px] font-bold uppercase tracking-[0.3em]">
+            100% Client-Side Mod • Universal Support
+        </div>
+        <h1 class="text-5xl md:text-8xl font-bold mb-6 tracking-tighter leading-tight">
+            <span class="brand-text-white">Improved</span> <br>
+            <span class="brand-text-color">Tier Signs</span>
+        </h1>
+        <p class="text-base md:text-xl opacity-60 mb-10 max-w-2xl mx-auto leading-relaxed">
+            Визуализация <span class="text-white font-bold">запретных зон</span>. Мод помогает отслеживать тиры территорий и избегать критических штрафов в реальном времени.
+        </p>
+        <div class="flex flex-wrap justify-center gap-4">
+            <a href="https://github.com/Artur7620/DMCTierSigns/releases" class="m3-btn-3d text-base" onmousemove="handle3d(event, this)" onmouseleave="reset3d(this)">
+                Установить мод
+            </a>
+            <a href="https://github.com/Artur7620/DMCTierSigns" class="m3-btn-3d text-base !bg-white/5 !text-white border border-white/10" onmousemove="handle3d(event, this)" onmouseleave="reset3d(this)">
+                GitHub Репозиторий
+            </a>
+        </div>
+    </header>
+
+    <!-- Tiers Section -->
+    <section id="tiers" class="py-20 px-6 max-w-7xl mx-auto reveal">
+        <div class="text-center mb-16">
+            <h2 class="text-4xl font-bold mb-4 tracking-tighter uppercase">Уровни запретных территорий</h2>
+            <p class="opacity-50 text-sm max-w-xl mx-auto italic">За нахождение в этих зонах начисляются штрафы. Чем ниже тир, тем серьезнее последствия за каждый заход.</p>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <!-- Tier 3 -->
+            <div class="u-card p-12 group border-t-8 border-green-500" onmousemove="handleTilt(event, this)" onmouseleave="resetTilt(this)">
+                <div class="card-shimmer"></div>
+                <div class="tier-icon-wrapper mb-8">
+                    <div class="tier-glow-effect bg-green-500"></div>
+                    <img src="https://raw.githubusercontent.com/Artur7620/DMCTierSigns/refs/heads/master/src/main/resources/assets/dmc_tiersigns/textures/gui/tier3.png" class="w-32 h-32 pixelated float-anim shadow-2xl" alt="T3">
+                </div>
+                <div class="text-center relative z-10" style="transform: translateZ(30px)">
+                    <h4 class="text-3xl font-black text-green-400 mb-2">Tier 3</h4>
+                    <p class="text-[10px] opacity-60 uppercase tracking-widest font-bold">Минимальный штраф</p>
+                </div>
+            </div>
+            <!-- Tier 2 -->
+            <div class="u-card p-12 group border-t-8 border-yellow-500" onmousemove="handleTilt(event, this)" onmouseleave="resetTilt(this)">
+                <div class="card-shimmer"></div>
+                <div class="tier-icon-wrapper mb-8">
+                    <div class="tier-glow-effect bg-yellow-500"></div>
+                    <img src="https://raw.githubusercontent.com/Artur7620/DMCTierSigns/refs/heads/master/src/main/resources/assets/dmc_tiersigns/textures/gui/tier2.png" class="w-32 h-32 pixelated float-anim shadow-2xl" style="animation-delay: 1s" alt="T2">
+                </div>
+                <div class="text-center relative z-10" style="transform: translateZ(30px)">
+                    <h4 class="text-3xl font-black text-yellow-400 mb-2">Tier 2</h4>
+                    <p class="text-[10px] opacity-60 uppercase tracking-widest font-bold">Умеренный штраф</p>
+                </div>
+            </div>
+            <!-- Tier 1 -->
+            <div class="u-card p-12 group border-t-8 border-red-500" onmousemove="handleTilt(event, this)" onmouseleave="resetTilt(this)">
+                <div class="card-shimmer"></div>
+                <div class="tier-icon-wrapper mb-8">
+                    <div class="tier-glow-effect bg-red-500"></div>
+                    <img src="https://raw.githubusercontent.com/Artur7620/DMCTierSigns/refs/heads/master/src/main/resources/assets/dmc_tiersigns/textures/gui/tier1.png" class="w-32 h-32 pixelated float-anim shadow-2xl" style="animation-delay: 2s" alt="T1">
+                </div>
+                <div class="text-center relative z-10" style="transform: translateZ(30px)">
+                    <h4 class="text-3xl font-black text-red-400 mb-2">Tier 1</h4>
+                    <p class="text-[10px] opacity-60 uppercase tracking-widest font-bold">Тяжелый штраф</p>
+                </div>
+            </div>
+            <!-- Tier 0 -->
+            <div class="u-card p-12 group border-t-8 border-zinc-600" onmousemove="handleTilt(event, this)" onmouseleave="resetTilt(this)">
+                <div class="card-shimmer"></div>
+                <div class="tier-icon-wrapper mb-8">
+                    <div class="tier-glow-effect bg-zinc-500"></div>
+                    <img src="https://raw.githubusercontent.com/Artur7620/DMCTierSigns/refs/heads/master/src/main/resources/assets/dmc_tiersigns/textures/gui/tier0.png" class="w-32 h-32 pixelated float-anim shadow-2xl" style="animation-delay: 3s" alt="T0">
+                </div>
+                <div class="text-center relative z-10" style="transform: translateZ(30px)">
+                    <h4 class="text-3xl font-black text-zinc-400 mb-2">Tier 0</h4>
+                    <p class="text-[10px] text-red-500 uppercase tracking-widest font-bold">Критический (БАН)</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Comparison -->
+    <section id="comparison" class="py-20 px-6 max-w-6xl mx-auto reveal">
+        <h2 class="text-4xl font-bold mb-16 text-center tracking-tighter uppercase">Сравнение Оригинал / Форк</h2>
+        <div class="u-card overflow-hidden">
+            <table class="w-full text-left border-collapse comparison-table">
+                <thead class="text-[10px] font-black uppercase tracking-[0.2em] opacity-40">
+                    <tr>
+                        <th class="p-8">Параметры</th>
+                        <th class="p-8">Оригинальный imsawiq</th>
+                        <th class="p-8 brand-text-color">Improved Tier Signs</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-white/5">
+                    <tr>
+                        <td class="p-8 font-bold text-sm">Визуальные ассеты</td>
+                        <td class="p-8">
+                            <img src="https://raw.githubusercontent.com/Artur7620/DMCTierSigns/refs/heads/master/src/main/resources/assets/dmc_tiersigns/textures/gui/tier_marker.png" class="w-6 h-6 pixelated opacity-80" alt="Marker">
+                            <span class="text-[10px] block opacity-40 mt-2">Базовый маркер</span>
+                        </td>
+                        <td class="p-8">
+                            <div class="flex gap-2 flex-wrap max-w-[120px]">
+                                <img src="https://raw.githubusercontent.com/Artur7620/DMCTierSigns/refs/heads/master/src/main/resources/assets/dmc_tiersigns/textures/gui/tier0.png" class="w-5 h-5 pixelated">
+                                <img src="https://raw.githubusercontent.com/Artur7620/DMCTierSigns/refs/heads/master/src/main/resources/assets/dmc_tiersigns/textures/gui/tier1.png" class="w-5 h-5 pixelated">
+                                <img src="https://raw.githubusercontent.com/Artur7620/DMCTierSigns/refs/heads/master/src/main/resources/assets/dmc_tiersigns/textures/gui/tier2.png" class="w-5 h-5 pixelated">
+                                <img src="https://raw.githubusercontent.com/Artur7620/DMCTierSigns/refs/heads/master/src/main/resources/assets/dmc_tiersigns/textures/gui/tier3.png" class="w-5 h-5 pixelated">
+                            </div>
+                            <span class="text-[10px] block brand-text-color font-bold mt-2 uppercase">Dava_Wasab Custom Bundle</span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="p-8 font-bold text-sm">Smart Opacity</td>
+                        <td class="p-8 opacity-40 text-xs">Всё видно через стены</td>
+                        <td class="p-8 text-purple-200 text-xs font-bold uppercase tracking-wider">Умная настройка и отсутствие засорения интерфейса</td>
+                    </tr>
+                    <tr>
+                        <td class="p-8 font-bold text-sm">Доступность</td>
+                        <td class="p-8 opacity-40 text-xs">Ограниченная</td>
+                        <td class="p-8 text-purple-200 text-xs font-bold uppercase tracking-wider">Работает на всех серверах</td>
+                    </tr>
+                    <tr>
+                        <td class="p-8 font-bold text-sm">Конфигурация</td>
+                        <td class="p-8 opacity-40 text-xs">Только через файлы</td>
+                        <td class="p-8 text-purple-200 text-xs font-bold uppercase tracking-wider">Полное и удобное меню настроек</td>
+                    </tr>
+                    <tr>
+                        <td class="p-8 font-bold text-sm">Оптимизация</td>
+                        <td class="p-8 opacity-40 text-xs">Базовая</td>
+                        <td class="p-8 text-purple-200 text-xs font-bold uppercase tracking-wider">Fast-Render Engine</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <!-- Authors Section -->
+    <section id="authors" class="py-20 px-6 max-w-7xl mx-auto reveal">
+        <h2 class="text-4xl font-bold mb-16 text-center tracking-tighter uppercase">Команда Разработчиков</h2>
+        <div class="grid md:grid-cols-3 gap-8">
+            <!-- Nemory -->
+            <div class="u-card p-10 group rounded-[2rem]" onmousemove="handleTilt(event, this)" onmouseleave="resetTilt(this)">
+                <div class="card-shimmer"></div>
+                <div class="relative mb-6" style="transform: translateZ(60px)">
+                    <img src="https://fluffycraft.net/api/minecraft/head/61777cf4bea9440693908273d5a97524" class="w-24 h-24 pixelated shadow-2xl relative z-10 rounded-3xl" alt="Nemory">
+                    <div class="absolute inset-0 bg-purple-500/20 blur-2xl rounded-full scale-150 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                </div>
+                <div class="text-center relative z-10" style="transform: translateZ(40px)">
+                    <h3 class="text-2xl font-bold mb-1">Nemory</h3>
+                    <p class="text-[10px] opacity-40 uppercase tracking-[0.2em] mb-8 font-bold">Lead Developer</p>
+                </div>
+                <div class="grid grid-cols-3 gap-2 w-full relative z-10">
+                    <a href="https://github.com/Artur7620" class="author-btn">GitHub</a>
+                    <a href="https://t.me/CABEJIEB" class="author-btn">Telegram</a>
+                    <a href="https://modrinth.com/user/nemory42" class="author-btn">Modrinth</a>
+                </div>
+            </div>
+            <!-- Dava_Wasab -->
+            <div class="u-card p-10 group rounded-[2rem]" onmousemove="handleTilt(event, this)" onmouseleave="resetTilt(this)">
+                <div class="card-shimmer"></div>
+                <div class="relative mb-6" style="transform: translateZ(60px)">
+                    <img src="https://fluffycraft.net/api/minecraft/head/510430ac412343079563a41d19de55a2" class="w-24 h-24 pixelated shadow-2xl relative z-10 rounded-3xl" alt="Dava_Wasab">
+                    <div class="absolute inset-0 bg-purple-500/20 blur-2xl rounded-full scale-150 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                </div>
+                <div class="text-center relative z-10" style="transform: translateZ(40px)">
+                    <h3 class="text-2xl font-bold mb-1">Dava_Wasab</h3>
+                    <p class="text-[10px] opacity-40 uppercase tracking-[0.2em] mb-8 font-bold">Artist & Designer</p>
+                </div>
+                <div class="grid grid-cols-3 gap-2 w-full relative z-10">
+                    <a href="https://github.com/Dava-Wasab" class="author-btn">GitHub</a>
+                    <a href="https://t.me/DavasMueslis" class="author-btn">Telegram</a>
+                    <a href="https://modrinth.com/user/Dava_Wasab" class="author-btn">Modrinth</a>
+                </div>
+            </div>
+            <!-- imsawiq -->
+            <div class="u-card p-10 group rounded-[2rem]" onmousemove="handleTilt(event, this)" onmouseleave="resetTilt(this)">
+                <div class="card-shimmer"></div>
+                <div class="relative mb-6" style="transform: translateZ(60px)">
+                    <img src="https://fluffycraft.net/api/minecraft/head/177758f82cb24cf98df9ddcdf5bec5f7" class="w-24 h-24 pixelated shadow-2xl relative z-10 rounded-3xl" alt="imsawiq">
+                    <div class="absolute inset-0 bg-white/10 blur-2xl rounded-full scale-150 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                </div>
+                <div class="text-center relative z-10" style="transform: translateZ(40px)">
+                    <h3 class="text-2xl font-bold mb-1">imsawiq</h3>
+                    <p class="text-[10px] opacity-40 uppercase tracking-[0.2em] mb-8 font-bold">Original Author</p>
+                </div>
+                <div class="grid grid-cols-3 gap-2 w-full relative z-10">
+                    <button onclick="warnBeforeRedirect('https://github.com/imsawiq')" class="author-btn">GitHub</button>
+                    <button onclick="warnBeforeRedirect('https://t.me/sawiqp')" class="author-btn">Telegram</button>
+                    <button onclick="warnBeforeRedirect('https://modrinth.com/user/imsawiq')" class="author-btn">Modrinth</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="py-20 px-6 border-t border-white/5 bg-[#16151a]">
+        <div class="max-w-7xl mx-auto grid md:grid-cols-4 gap-12 text-left">
+            <div class="md:col-span-2">
+                <div class="flex items-center gap-4 mb-6">
+                    <img src="https://raw.githubusercontent.com/Artur7620/DMCTierSigns/refs/heads/master/src/main/resources/assets/dmc_tiersigns/icon.png" class="w-10 h-10 pixelated" alt="L">
+                    <span class="text-xl font-bold tracking-tighter uppercase"><span class="brand-text-white">Improved</span> <span class="brand-text-color">Tier Signs</span></span>
+                </div>
+                <p class="opacity-40 text-sm max-w-sm leading-relaxed mb-8">
+                    Универсальный <span class="text-white">Client-Side Mod</span> для визуализации уровней опасности. Помогает игрокам ориентироваться в правилах сервера.
+                </p>
+            </div>
+            <div>
+                <h4 class="font-bold text-xs uppercase tracking-[0.3em] mb-6 opacity-30">Ресурсы</h4>
+                <ul class="space-y-4 text-sm font-medium opacity-60">
+                    <li><a href="https://github.com/Artur7620/DMCTierSigns" class="hover:text-purple-300 transition-colors">GitHub Repo</a></li>
+                    <li><a href="https://github.com/Artur7620/DMCTierSigns/releases" class="hover:text-purple-300 transition-colors">Downloads</a></li>
+                </ul>
+            </div>
+            <div>
+                <h4 class="font-bold text-xs uppercase tracking-[0.3em] mb-6 opacity-30">Авторы</h4>
+                <ul class="space-y-4 text-sm font-medium opacity-60">
+                    <li><a href="https://t.me/CABEJIEB" class="hover:text-purple-300 transition-colors">Nemory (Dev)</a></li>
+                    <li><a href="https://t.me/DavasMueslis" class="hover:text-purple-300 transition-colors">Dava_Wasab (Site/Art)</a></li>
+                    <li><button onclick="warnBeforeRedirect('https://t.me/sawiqp')" class="hover:text-purple-300 transition-colors">imsawiq (Original)</button></li>
+                </ul>
+            </div>
+        </div>
+        <div class="mt-20 pt-8 border-t border-white/5 text-center">
+            <p class="text-[10px] opacity-20 uppercase tracking-[0.5em]">Site Developed by Dava-Wasab | Improved Tier Signs 2026</p>
+        </div>
+    </footer>
+</div>
+
+<script>
+    // Общая функция 3D наклона и освещения
+    function handleTilt(e, el) {
+        const rect = el.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        const centerX = rect.width / 2;
+        const centerY = rect.height / 2;
+        
+        // Расчет углов наклона (макс 15 градусов)
+        const rotateX = (centerY - y) / 10;
+        const rotateY = (x - centerX) / 10;
+        
+        el.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.02, 1.02, 1.02)`;
+        
+        // Динамическое освещение (эффект экспозиции)
+        const shimmer = el.querySelector('.card-shimmer');
+        if (shimmer) {
+            const highlightX = (x / rect.width) * 100;
+            const highlightY = (y / rect.height) * 100;
+            shimmer.style.background = `radial-gradient(circle at ${highlightX}% ${highlightY}%, rgba(255,255,255,0.15) 0%, transparent 60%)`;
+        }
+    }
+
+    function resetTilt(el) {
+        el.style.transform = `perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)`;
+        const shimmer = el.querySelector('.card-shimmer');
+        if (shimmer) shimmer.style.background = 'transparent';
+    }
+
+    // Старая функция для кнопок
+    function handle3d(e, el) {
+        const rect = el.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        const centerX = rect.width / 2;
+        const centerY = rect.height / 2;
+        const rotateX = (y - centerY) / 8;
+        const rotateY = (centerX - x) / 8;
+        el.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.05, 1.05, 1.05)`;
+        const highlightX = (x / rect.width) * 100;
+        const highlightY = (y / rect.height) * 100;
+        el.style.background = `radial-gradient(circle at ${highlightX}% ${highlightY}%, #E9DFFF 0%, var(--md-sys-color-primary) 70%)`;
+    }
+
+    function reset3d(el) {
+        el.style.transform = `perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)`;
+        el.style.background = `var(--md-sys-color-primary)`;
+    }
+
+    const modal = document.getElementById('custom-modal');
+    const modalYes = document.getElementById('modal-yes');
+    const modalNo = document.getElementById('modal-no');
+    let pendingUrl = '';
+
+    function warnBeforeRedirect(url) {
+        pendingUrl = url;
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+    }
+
+    modalNo.onclick = () => {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    };
+    modalYes.onclick = () => {
+        window.open(pendingUrl, '_blank');
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    };
+
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) entry.target.classList.add('active');
+        });
+    }, { threshold: 0.1 });
+
+    document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+</script>
+</body>
+</html>
